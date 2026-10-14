@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--csp-->
+<title>SignBridge: turn hand signs into text and speech</title>
+<meta name="description" content="SignBridge helps people who sign and people who don't understand sign language talk to each other. Show a sign to your webcam and it appears as text and can be read aloud.">
+<meta name="theme-color" content="#0e1420">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#4cc9f0"/><path d="M8 24c4-9 8-9 12 0s8 9 12 0" stroke="#06202b" stroke-width="3.4" fill="none" stroke-linecap="round"/><circle cx="8" cy="24" r="2.6" fill="#06202b"/><circle cx="32" cy="24" r="2.6" fill="#06202b"/></svg>
+    <span>SignBridge</span>
+  </div>
+  <nav class="tabs" aria-label="Main">
+    <button class="tab" data-view="home">Home</button>
+    <button class="tab" data-view="sign">Sign to speech</button>
+    <button class="tab" data-view="voice">Voice assistant</button>
+  </nav>
+  <div class="tools" role="group" aria-label="Display settings">
+    <button class="btn small icon" id="txtDown" aria-label="Smaller text">A&minus;</button>
+    <button class="btn small icon" id="txtUp" aria-label="Larger text">A+</button>
+    <button class="btn small" id="themeBtn" aria-label="Switch to light theme">Light theme</button>
+  </div>
+</header>
+
+<main id="main" class="is-home">
+  <div>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div id="announce" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- Home: explains the idea in plain words -->
+    <section id="view-home" class="stack" aria-labelledby="h-home">
+      <div class="card hero">
+        <h1 id="h-home">Helping people who sign and people who speak understand each other</h1>
+        <p>Many people who use sign language struggle to be understood by those who never learned it. SignBridge helps close that gap. Show a sign to your webcam and it appears as words on the screen. One tap, and those words are read out loud.</p>
+        <div class="row mt-2">
+          <button class="btn primary" data-go="sign">Try sign to speech</button>
+          <button class="btn" data-go="voice">Try the voice assistant</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card benefit">
+          <h3>Signs become words</h3>
+          <p>You can show a sign to the camera and see it written out, so the person in front of you can read it.</p>
+        </div>
+        <div class="card benefit">
+          <h3>Words become speech</h3>
+          <p>The text can be spoken aloud, which helps in places like shops, banks and clinics.</p>
+        </div>
+        <div class="card benefit">
+          <h3>You teach it your signs</h3>
+          <p>It learns from you, so it can match the signs you really use, such as the alphabet or everyday words.</p>
+        </div>
+        <div class="card benefit">
+          <h3>Simple help by voice</h3>
+          <p>Say or type a short request like "hello" or "help". It only does a small, safe list of things.</p>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>How to start</h2>
+          <ol class="steps">
+            <li>Open Sign to speech and turn on the camera.</li>
+            <li>Show it a sign and record it a few times. Do this for at least two signs.</li>
+            <li>Press Start recognition and begin signing.</li>
+            <li>Press Speak text to hear your words.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h2>Will it work on my device?</h2>
+          <ul class="checks" id="compat"></ul>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Your privacy</h2>
+          <p>Your camera video stays on your own device. It is never saved and never sent anywhere. The camera and microphone only turn on when you press Start. Your conversation is gone when you close the page.</p>
+          <p class="muted">Some browsers send your voice to their own service to turn it into text. That is a browser feature, not something SignBridge does.</p>
+          <button class="btn danger" id="clearSession">Clear conversation and text</button>
+        </div>
+        <div class="card">
+          <h2>What it can't do yet</h2>
+          <p>SignBridge is an early version. It recognizes only the signs you teach it, using one hand at a time. It does not understand full sign language, which also uses movement, facial expressions and sentence structure.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sign to speech -->
+    <section id="view-sign" class="stack" aria-labelledby="h-sign" hidden>
+      <div class="card">
+        <h2 id="h-sign">Sign to speech</h2>
+        <div class="stage" id="stage">
+          <video id="cam" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="idle" id="idle"><p>The camera is off.<br>Press Start camera to begin. Nothing is recorded.</p></div>
+          <div class="reading" id="reading" hidden aria-hidden="true">
+            <div class="glyph dim" id="glyph">&ndash;</div>
+            <div class="words"><div id="readText">Looking for a hand</div><div class="meter"><i id="meterFill"></i></div></div>
+          </div>
+        </div>
+        <div class="row mt-1">
+          <button class="btn primary" id="camStart">Start camera</button>
+          <button class="btn" id="camStop" disabled>Stop camera</button>
+          <button class="btn primary" id="recStart" disabled>Start recognition</button>
+          <button class="btn" id="recStop" disabled>Stop recognition</button>
+          <button class="btn" id="modelRetry" hidden>Try loading hand tracking again</button>
+        </div>
+        <div class="chips mt-1" aria-label="Status">
+          <span class="chip" id="chipCam">Camera: off</span>
+          <span class="chip" id="chipModel">Hand tracking: not loaded</span>
+          <span class="chip" id="chipRec">Recognition: off</span>
+          <span class="chip" id="chipGest">Signs taught: 0</span>
+        </div>
+        <div class="field mt-2">
+          <label for="thresh">How sure should I be? <output id="threshOut">70%</output></label>
+          <input type="range" id="thresh" min="40" max="95" value="70">
+          <span class="muted">If I'm less sure than this, I will ignore the sign instead of guessing.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Your text</h2>
+        <label for="compose">Text from your signs (you can also type here)</label>
+        <textarea id="compose"></textarea>
+        <div class="row mt-1">
+          <button class="btn" id="bSpace">Space</button>
+          <button class="btn" id="bBack">Backspace</button>
+          <button class="btn" id="bUndo">Undo</button>
+          <button class="btn" id="bClear">Clear</button>
+        </div>
+        <div class="row mt-1">
+          <button class="btn primary" id="bSpeak">Speak text</button>
+          <button class="btn" id="bCopy">Copy text</button>
+          <button class="btn" id="bSend">Add to conversation</button>
+        </div>
+      </div>
+
+      <details class="card" id="teach">
+        <summary>Teach gestures</summary>
+        <p class="muted mt-1">Turn the camera on, then record each sign at least twice, in separate recordings. Move your hand a little closer and farther each time. Name a sign SPACE to add a space, or DEL to delete a letter.</p>
+        <div class="grid2">
+          <div class="field"><label for="gLabel">Sign name</label><input type="text" id="gLabel" maxlength="20" autocomplete="off" placeholder="For example A, B or Hello"></div>
+          <div class="field"><label for="gCount">Samples per recording</label><select id="gCount"><option>30</option><option selected>45</option><option>60</option></select></div>
+        </div>
+        <div class="row mt-2">
+          <button class="btn primary" id="gRecord">Record sign</button>
+          <span id="gProgress" class="muted" role="status"></span>
+        </div>
+        <table id="gTable" aria-label="Taught signs"><thead><tr><th>Sign</th><th>Samples</th><th>Recordings</th><th><span class="sr-only">Remove</span></th></tr></thead><tbody></tbody></table>
+        <p class="muted" id="gEmpty">No signs yet. Record one above.</p>
+        <div class="row mt-2">
+          <button class="btn" id="gEval">Check how well it works</button>
+          <button class="btn" id="gExport">Save signs to a file</button>
+          <button class="btn" id="gImportBtn">Load signs from a file</button>
+          <input type="file" id="gImport" accept="application/json" hidden>
+          <button class="btn danger" id="gWipe">Remove all signs</button>
+        </div>
+        <div class="field mt-2">
+          <label class="plain-label"><input type="checkbox" id="gKeep"> Keep my signs on this device</label>
+          <span class="muted">Saves hand-shape numbers (not pictures) in this browser, so you don't have to teach them again.</span>
+        </div>
+        <div id="evalOut" role="status" class="mt-2"></div>
+      </details>
+    </section>
+
+    <!-- Voice assistant -->
+    <section id="view-voice" class="stack" aria-labelledby="h-voice" hidden>
+      <div class="card" id="voiceCard">
+        <h2 id="h-voice">Voice assistant</h2>
+        <div class="row">
+          <button class="btn primary" id="vStart">Start listening</button>
+          <button class="btn" id="vStop" disabled>Stop listening</button>
+          <span aria-live="polite"><span class="listen-dot" aria-hidden="true"></span><span id="vState">Not listening</span></span>
+        </div>
+        <p id="vUnsupported" class="muted mt-1" hidden>This browser can't listen to speech. You can still type commands below. Chrome and Edge usually work.</p>
+        <div class="field mt-2"><span class="bold">What I heard</span><div id="vHeard" class="muted">Nothing yet</div></div>
+        <form id="vForm" class="field mt-2">
+          <label for="vType">Type a command</label>
+          <div class="row"><input type="text" id="vType" class="grow" autocomplete="off" placeholder="For example: hello"><button class="btn primary" type="submit">Send</button></div>
+        </form>
+        <div class="field mt-2"><span class="bold">My reply</span><div id="vReply" aria-live="polite">Say or type a command.</div></div>
+        <div class="row mt-1">
+          <button class="btn" id="vSpeak">Speak reply</button>
+          <label class="plain-label"><input type="checkbox" id="vAuto"> Speak replies automatically</label>
+        </div>
+        <div class="confirm" id="vConfirm" hidden>
+          <p id="vConfirmText"></p>
+          <div class="row"><button class="btn primary" id="vYes">Open it</button><button class="btn" id="vNo">Cancel</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>What you can ask</h2>
+        <dl class="cmds" id="cmdList"></dl>
+      </div>
+    </section>
+  </div>
+
+  <aside class="convo card" aria-labelledby="h-convo">
+    <div class="row between">
+      <h2 id="h-convo" class="flat">Conversation</h2>
+      <button class="btn small" id="convoClear">Clear</button>
+    </div>
+    <ul class="log mt-1" id="log" aria-live="polite" aria-relevant="additions"></ul>
+    <p class="muted mt-1" id="logEmpty">Signed text, voice requests and replies show up here. They stay on this page only.</p>
+  </aside>
+</main>
+
+<footer class="site-footer">SignBridge is an early version. It recognizes only the signs you teach it and does not translate full sign language.</footer>
+</body>
+</html>
